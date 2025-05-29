@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Campaign Created</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f7f9fc;
+        padding: 20px;
+      }
+      .box {
+        background: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 600px;
+        margin: auto;
+      }
+      h2 {
+        color: #007bff;
+      }
+      .label {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h2>🎉 New Campaign Created!</h2>
+      <p><span class="label">ID:</span> {{.Id}}</p>
+      <p><span class="label">Title:</span> {{.Title}}</p>
+      <p><span class="label">Description:</span> {{.Description}}</p>
+      <p><span class="label">Target Amount:</span> IDR{{.TargetAmount}}</p>
+      <p>
+        <span class="label">Collected Amount:</span> IDR{{.CollectedAmount}}
+      </p>
+      <p><span class="label">Deadline:</span> {{.Deadline}}</p>
+      <p><span class="label">Status:</span> {{.Status}}</p>
+      <p><span class="label">Category:</span> {{.Category}}</p>
+      <p><span class="label">Minimum Donation:</span> IDR{{.MinDonation}}</p>
+      <p>Thank you for launching this campaign with NotifyStack!</p>
+    </div>
+  </body>
+</html>

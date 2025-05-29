@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package campaign.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+
+option go_package = '/campaign;campaign';
+
+enum CampaignStatus {
+  CAMPAIGN_STATUS_UNSPECIFIED = 0;
+  CAMPAIGN_STATUS_ACTIVE = 1;
+  CAMPAIGN_STATUS_PAUSED = 2;
+  CAMPAIGN_STATUS_COMPLETED = 3;
+  CAMPAIGN_STATUS_CANCELLED = 4;    
+}
+
+enum CampaignCategory {
+  CAMPAIGN_CATEGORY_UNSPECIFIED = 0;
+  CAMPAIGN_CATEGORY_EDUCATION = 1;
+  CAMPAIGN_CATEGORY_HEALTHCARE = 2;
+  CAMPAIGN_CATEGORY_ENVIRONMENT = 3;
+  CAMPAIGN_CATEGORY_ANIMALS = 4;
+  CAMPAIGN_CATEGORY_EMERGENCY = 5;
+  CAMPAIGN_CATEGORY_COMMUNITY = 6;
+  CAMPAIGN_CATEGORY_TECHNOLOGY = 7;
+  CAMPAIGN_CATEGORY_ARTS = 8;
+  CAMPAIGN_CATEGORY_SPORTS = 9;
+}
+
+message Campaign {
+  string id = 1;
+  int32 user_id = 2;
+  string title = 3;
+  string description = 4;
+  int32 target_amount = 5;
+  int32 collected_amount = 6;
+  google.protobuf.Timestamp deadline = 7;
+  CampaignStatus status = 8;
+  CampaignCategory category = 9;
+  int32 min_donation = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// Create Campaign
+message CreateCampaignRequest {
+  int32 user_id = 1;
+  string title = 2;
+  string description = 3;
+  int32 target_amount = 4;
+  google.protobuf.Timestamp deadline = 5;
+  CampaignCategory category = 6;
+  int32 min_donation = 7;
+}
+
+message CreateCampaignResponse {
+  repeated Campaign created_campaign = 1;
+}
+
+// Get Campaign By ID
+message GetCampaignByIDRequest {
+    string id = 1;
+}
+
+message GetCampaignByIDResponse{
+    repeated Campaign campaign = 1;
+}
+
+// Delete Campaign By ID
+message DeleteCampaignByIDRequest {
+    string id = 1;
+}
+
+message DeleteCampaignByIDResponse {
+    google.protobuf.Empty delete_response = 1;
+}
+
+// Update Campaign By ID
+message UpdateCampaignByIDRequest {
+    string id = 1;
+    int32 user_id = 2;
+    string title = 3;
+    string description = 4;
+    int32 target_amount = 5;
+    google.protobuf.Timestamp deadline = 6;
+    CampaignStatus status = 7;
+    CampaignCategory category = 8;
+    int32 min_donation = 9;
+}
+
+message UpdateCampaignByIDResponse {
+    repeated Campaign updated_campaign = 1;
+}
+
+// Get Campaign By ID
+message GetCampaignsByUserIDRequest {
+    int32 user_id = 1;
+}
+
+message GetCampaignsByUserIDResponse{
+    repeated Campaign campaign = 1;
+}
+
+message Notification{
+  string id = 1;
+  int32 user_id = 2;
+}
+
+service CampaignService {
+  rpc CreateCampaign(CreateCampaignRequest) returns (CreateCampaignResponse);
+  rpc GetCampaignByID(GetCampaignByIDRequest) returns (GetCampaignByIDResponse);
+  rpc DeleteCampaignByID(DeleteCampaignByIDRequest) returns (DeleteCampaignByIDResponse);
+  rpc UpdateCampaignByID(UpdateCampaignByIDRequest) returns (UpdateCampaignByIDResponse);
+  rpc GetCampaignsByUserID(GetCampaignsByUserIDRequest) returns (GetCampaignsByUserIDResponse);
+}
