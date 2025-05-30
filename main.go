@@ -175,6 +175,7 @@ func main() {
 			for _, c := range response.GetCreatedCampaign() {
 				// Get User info from user service
 				userInterface := ConnectUserService(c.UserId)
+				log.Println(userInterface)
 				SendHTMLTemplateEmail("create",userInterface.Email,c,"templates/campaign_create.html")
 			}
 			d.Ack(false)
@@ -318,7 +319,7 @@ func ConnectUserService(id int32) UserTemplateData{
 	}
 	defer conn.Close()
 	client :=pb.NewUserServiceClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	userResponse, err := client.GetUserByID(ctx,&pb.UserIdRequest{
 		Id: id,
