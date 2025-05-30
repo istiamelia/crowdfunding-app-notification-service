@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"html/template"
 	"log"
+	"net/http"
 	"notification-service/gen/go/campaign/v1"
 	"notification-service/helper"
 	"os"
@@ -28,7 +30,7 @@ var (
 
 type CampaignTemplateData struct {
 	Id              string
-	UserId 			int32
+	UserId          int32
 	Title           string
 	Description     string
 	TargetAmount    int32
@@ -39,10 +41,10 @@ type CampaignTemplateData struct {
 	Category        string
 }
 
-type UserTemplateData struct{
-	Id int32
-	Name string
-	Email string
+type UserTemplateData struct {
+	Id       int32
+	Name     string
+	Email    string
 	Password string
 }
 
@@ -60,10 +62,12 @@ var (
 func main() {
 
 	var err error
-	// Find .env file
-	err = godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s", err)
+	// Load .env only if running locally
+	if os.Getenv("ENV") != "production" {
+		err := godotenv.Load(".env")
+		if err != nil {
+			fmt.Println("Warning: .env file not found, using environment variables instead")
+		}
 	}
 
 	// Get the rabbitmq URL from env
@@ -92,7 +96,7 @@ func main() {
 	// Declare the queue for create campaign
 	q, err := ch.QueueDeclare(
 		"campaign_created_notification", // name
-		true,                           // durable
+		true,                            // durable
 		false,                           // delete when unused
 		false,                           // exclusive
 		false,                           // no-wait
@@ -113,7 +117,7 @@ func main() {
 	// Declare the queue for delete campaign
 	q2, err := ch.QueueDeclare(
 		"campaign_deleted_notification", // name
-		true,                           // durable
+		true,                            // durable
 		false,                           // delete when unused
 		false,                           // exclusive
 		false,                           // no-wait
@@ -176,7 +180,7 @@ func main() {
 				// Get User info from user service
 				userInterface := ConnectUserService(c.UserId)
 				log.Println(userInterface)
-				SendHTMLTemplateEmail("create",userInterface.Email,c,"templates/campaign_create.html")
+				SendHTMLTemplateEmail("create", userInterface.Email, c, "templates/campaign_create.html")
 			}
 			d.Ack(false)
 		}
@@ -192,9 +196,26 @@ func main() {
 			}
 			// Get User info from user service
 			userInterface := ConnectUserService(msg.UserId)
-			SendHTMLTemplateEmail("delete",userInterface.Email,&msg,"templates/campaign_delete.html")
+			SendHTMLTemplateEmail("delete", userInterface.Email, &msg, "templates/campaign_delete.html")
 			d.Ack(false)
 
+		}
+	}()
+
+	// Start minimal HTTP server to satisfy Cloud Run health checks
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	go func() {
+		http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("ok"))
+		})
+		log.Printf("Starting health check server on port %s", port)
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
+			log.Fatalf("Health check server failed: %v", err)
 		}
 	}()
 
@@ -202,7 +223,7 @@ func main() {
 	<-forever
 }
 
-func SendHTMLTemplateEmail(action string, email string, payload interface{},fileName string) {
+func SendHTMLTemplateEmail(action string, email string, payload interface{}, fileName string) {
 
 	// Load and parse the HTML template
 	tmpl, err := template.ParseFiles(fileName)
@@ -211,16 +232,16 @@ func SendHTMLTemplateEmail(action string, email string, payload interface{},file
 	}
 
 	var data CampaignTemplateData
-	if action == "create"{
-		
+	if action == "create" {
+
 		createdCampaign, ok := payload.(*campaign.Campaign)
 		if !ok {
 			log.Fatalf("failed to cast data campaign")
 		}
 		log.Println(createdCampaign)
 		data = campaignToTemplateData(createdCampaign)
-	} else if action == "delete"{
-		
+	} else if action == "delete" {
+
 		id, ok := payload.(*campaign.Notification)
 		if !ok {
 			log.Fatalf("failed to cast data delete")
@@ -255,7 +276,6 @@ func SendHTMLTemplateEmail(action string, email string, payload interface{},file
 		subject = "Notification"
 	}
 
-
 	// Create message with HTML body
 	message := mailgun.NewMessage(domain, sender, subject, "", recipient)
 	message.SetHTML(htmlBody.String())
@@ -274,7 +294,6 @@ func SendHTMLTemplateEmail(action string, email string, payload interface{},file
 	log.Printf("✅ Email sent successfully: ID: %s\n", resp.ID)
 }
 
-
 func campaignToTemplateData(c *campaign.Campaign) CampaignTemplateData {
 	return CampaignTemplateData{
 		Id:              c.Id,
@@ -290,22 +309,21 @@ func campaignToTemplateData(c *campaign.Campaign) CampaignTemplateData {
 }
 
 func campaignIDToTemplateData(id *campaign.Notification) CampaignTemplateData {
-    return CampaignTemplateData{
-        Id: id.Id,
-    }
+	return CampaignTemplateData{
+		Id: id.Id,
+	}
 }
 
-
-func userToTemplateData(c *pb.UserResponse) UserTemplateData{
+func userToTemplateData(c *pb.UserResponse) UserTemplateData {
 	return UserTemplateData{
-		Id: c.Id,
-		Name: c.Name,
-		Email: c.Email,
+		Id:       c.Id,
+		Name:     c.Name,
+		Email:    c.Email,
 		Password: c.Password,
 	}
 }
 
-func ConnectUserService(id int32) UserTemplateData{
+func ConnectUserService(id int32) UserTemplateData {
 	// Start a connection to User-Service as Client
 	flag.Parse()
 	opts := []grpc.DialOption{
@@ -318,13 +336,13 @@ func ConnectUserService(id int32) UserTemplateData{
 		log.Fatalf("Failed to dial MyService server: %v", err)
 	}
 	defer conn.Close()
-	client :=pb.NewUserServiceClient(conn)
+	client := pb.NewUserServiceClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	userResponse, err := client.GetUserByID(ctx,&pb.UserIdRequest{
+	userResponse, err := client.GetUserByID(ctx, &pb.UserIdRequest{
 		Id: id,
 	})
-	if err != nil{
+	if err != nil {
 		log.Fatalf("%v", err)
 	}
 
